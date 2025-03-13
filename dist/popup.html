@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>spareMyMac</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 300px;
+            padding: 15px;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #3367d6;
+        }
+
+        .section-title {
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .secondary-button {
+            background-color: #34a853;
+        }
+
+        .secondary-button:hover {
+            background-color: #2e8b57;
+        }
+
+        #status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #f5f5f5;
+            min-height: 18px;
+            font-weight: bold;
+        }
+
+        .settings {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>spareMyMac</h2>
+
+        <div class="section-title">With AI Summaries:</div>
+        <div class="button-group">
+            <button id="exportToObsidian">Export to Obsidian</button>
+            <button id="copyToClipboard">Copy to Clipboard</button>
+            <button id="downloadList">Download as Markdown</button>
+        </div>
+
+        <div class="section-title">Links Only (No Summaries):</div>
+        <div class="button-group">
+            <button id="exportLinksToObsidian" class="secondary-button">Export Links to Obsidian</button>
+            <button id="copyLinksToClipboard" class="secondary-button">Copy Links to Clipboard</button>
+            <button id="downloadLinks" class="secondary-button">Download Links</button>
+        </div>
+
+        <div id="status"></div>
+
+        <div class="settings">
+            <h3>Settings</h3>
+            <label for="geminiApiKey">Gemini API Key:</label>
+            <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key">
+
+            <label for="obsidianVault">Obsidian Vault Name:</label>
+            <input type="text" id="obsidianVault" placeholder="Enter your vault name">
+
+            <label for="obsidianNote">Note Name:</label>
+            <input type="text" id="obsidianNote" placeholder="Enter note name">
+        </div>
+    </div>
+    <script type="module" src="dist/bundle.js"></script>
+</body>
+
+</html>
