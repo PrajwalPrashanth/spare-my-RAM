@@ -216,10 +216,10 @@ async function exportToObsidian() {
       
       // Open Obsidian with clipboard paste command
       const clipboardUrl = `${baseUrl}&mode=append&clipboard=true`;
-      window.location.href = clipboardUrl;
+      window.open(clipboardUrl, '_blank');
       showStatus('Content copied to clipboard and sent to Obsidian');
     } else {
-      window.location.href = fullUrl;
+      window.open(fullUrl, '_blank');
       showStatus('Exported to Obsidian');
     }
 
@@ -258,7 +258,7 @@ async function exportLinksToObsidian() {
     const obsidianUrl = `obsidian://advanced-uri?vault=${encodeURIComponent(obsidianVault)}&filepath=${encodeURIComponent(obsidianNote)}&mode=append&data=${encodedContent}`;
     
     // Try to open Obsidian
-    window.location.href = obsidianUrl;
+    window.open(obsidianUrl, '_blank');
     
     showStatus('Links exported to Obsidian');
   } catch (error) {
