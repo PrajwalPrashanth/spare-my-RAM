@@ -12,6 +12,8 @@ A Chrome extension that helps you save memory on your Mac by collecting URLs fro
 - Copy links without summaries to clipboard
 - Download links without summaries as a markdown file
 
+![](image.png)
+
 ## Installation
 
 ### Prerequisites
