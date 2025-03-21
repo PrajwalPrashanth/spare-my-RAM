@@ -1,4 +1,11 @@
-import { initGemini, generateSummary, extractPageContent } from './gemini.js';
+import { 
+    initGemini, 
+    generateSummary, 
+    generateYouTubeSummary, 
+    extractPageContent, 
+    setYoutubeSummaryEnabled,
+    isYouTubeUrl 
+} from './gemini.js';
 
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Popup loaded');
@@ -7,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   showStatus('Loading extension...', 'blue');
   
   // Load saved settings
-  chrome.storage.sync.get(['obsidianVault', 'obsidianNote', 'geminiApiKey'], async function(items) {
+  chrome.storage.sync.get(['obsidianVault', 'obsidianNote', 'geminiApiKey', 'enableYoutubeSummary'], async function(items) {
     console.log('Settings loaded:', Object.keys(items));
     
     if (items.obsidianVault) {
@@ -27,12 +34,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
       showStatus('Please enter your Gemini API key', 'blue');
     }
+
+    // Set YouTube summary toggle state
+    const enableYoutubeSummary = items.enableYoutubeSummary || false;
+    document.getElementById('enableYoutubeSummary').checked = enableYoutubeSummary;
+    setYoutubeSummaryEnabled(enableYoutubeSummary);
   });
 
   // Save settings when changed
   document.getElementById('obsidianVault').addEventListener('change', saveSettings);
   document.getElementById('obsidianNote').addEventListener('change', saveSettings);
   document.getElementById('geminiApiKey').addEventListener('change', saveSettings);
+  document.getElementById('enableYoutubeSummary').addEventListener('change', saveSettings);
 
   // Button event listeners for summarized content
   document.getElementById('exportToObsidian').addEventListener('click', exportToObsidian);
@@ -50,6 +63,7 @@ async function saveSettings() {
   const obsidianVault = document.getElementById('obsidianVault').value;
   const obsidianNote = document.getElementById('obsidianNote').value;
   const geminiApiKey = document.getElementById('geminiApiKey').value;
+  const enableYoutubeSummary = document.getElementById('enableYoutubeSummary').checked;
   
   showStatus('Saving settings...', 'blue');
   
@@ -61,10 +75,13 @@ async function saveSettings() {
     }
   }
 
+  setYoutubeSummaryEnabled(enableYoutubeSummary);
+
   chrome.storage.sync.set({
     'obsidianVault': obsidianVault,
     'obsidianNote': obsidianNote,
-    'geminiApiKey': geminiApiKey
+    'geminiApiKey': geminiApiKey,
+    'enableYoutubeSummary': enableYoutubeSummary
   }, function() {
     showStatus('Settings saved');
   });
@@ -83,37 +100,45 @@ function collectCurrentTabs() {
 
 // Process a single tab and generate its summary
 async function processTab(tab) {
-  try {
-    showStatus(`Processing: ${tab.title}...`);
-    console.log('Processing tab:', tab.id, tab.title);
-    
-    const content = await extractPageContent(tab);
-    console.log('Content extracted:', content.substring(0, 50) + '...');
-    
-    if (content.startsWith('Unable to extract content:')) {
-      return {
-        title: tab.title,
-        url: tab.url,
-        summary: content
-      };
+    try {
+        showStatus(`Processing: ${tab.title}...`);
+        console.log('Processing tab:', tab.id, tab.title);
+        
+        // First check if it's a YouTube URL and the feature is enabled
+        const isYouTube = isYouTubeUrl(tab.url);
+        const youTubeSummaryEnabled = document.getElementById('enableYoutubeSummary').checked;
+        
+        if (isYouTube && youTubeSummaryEnabled) {
+            console.log('Processing YouTube video...');
+            const ytSummary = await generateYouTubeSummary(tab.url);
+            if (ytSummary) {
+                return {
+                    title: tab.title,
+                    url: tab.url,
+                    summary: ytSummary
+                };
+            }
+            console.log('YouTube transcript summarization failed, falling back to regular content extraction');
+        }
+        
+        // Regular content extraction flow (non-YouTube or fallback)
+        console.log('Using regular content extraction...');
+        const content = await extractPageContent(tab);
+        console.log('Content extracted:', content.substring(0, 50) + '...');
+        
+        return {
+            title: tab.title,
+            url: tab.url,
+            summary: await generateSummary(content, tab.url)
+        };
+    } catch (error) {
+        console.error('Error processing tab:', error);
+        return {
+            title: tab.title,
+            url: tab.url,
+            summary: `Error processing tab: ${error.message}`
+        };
     }
-    
-    const summary = await generateSummary(content);
-    console.log('Summary generated:', summary);
-    
-    return {
-      title: tab.title,
-      url: tab.url,
-      summary: summary
-    };
-  } catch (error) {
-    console.error('Error processing tab:', error);
-    return {
-      title: tab.title,
-      url: tab.url,
-      summary: `Error processing tab: ${error.message}`
-    };
-  }
 }
 
 // Format tabs as markdown links with summaries
@@ -181,13 +206,23 @@ async function exportToObsidian() {
     // Encode the markdown content for the URL
     const encodedContent = encodeURIComponent('\n\n' + markdown);
     
-    // Create the Obsidian URL using Advanced URI plugin format
-    const obsidianUrl = `obsidian://advanced-uri?vault=${encodeURIComponent(obsidianVault)}&filepath=${encodeURIComponent(obsidianNote)}&mode=append&data=${encodedContent}`;
+    // Check URL length and use clipboard if too long
+    const baseUrl = `obsidian://advanced-uri?vault=${encodeURIComponent(obsidianVault)}&filepath=${encodeURIComponent(obsidianNote)}`;
+    const fullUrl = `${baseUrl}&mode=append&data=${encodedContent}`;
     
-    // Try to open Obsidian
-    window.location.href = obsidianUrl;
-    
-    showStatus('Exported to Obsidian');
+    if (fullUrl.length > 2000) { // URL length limit
+      console.log('URL too long, using clipboard method');
+      await navigator.clipboard.writeText(markdown);
+      
+      // Open Obsidian with clipboard paste command
+      const clipboardUrl = `${baseUrl}&mode=append&clipboard=true`;
+      window.location.href = clipboardUrl;
+      showStatus('Content copied to clipboard and sent to Obsidian');
+    } else {
+      window.location.href = fullUrl;
+      showStatus('Exported to Obsidian');
+    }
+
   } catch (error) {
     console.error('Obsidian export error:', error);
     showStatus(`Export failed: ${error.message}`, 'red');

@@ -78,6 +78,58 @@
             margin-bottom: 10px;
             box-sizing: border-box;
         }
+
+        .settings-toggle {
+            margin-bottom: 10px;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .toggle-label input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .toggle-input {
+            display: none;
+            /* Hide the default checkbox */
+        }
+
+        .slider {
+            position: relative;
+            width: 34px;
+            height: 20px;
+            background-color: #ccc;
+            border-radius: 34px;
+            transition: background-color 0.2s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+
+        .toggle-input:checked+.slider {
+            background-color: #4CAF50;
+            /* Green background when checked */
+        }
+
+        .toggle-input:checked+.slider:before {
+            transform: translateX(14px);
+            /* Move the slider to the right */
+        }
     </style>
 </head>
 
@@ -86,6 +138,13 @@
         <h2>spareMyMac</h2>
 
         <div class="section-title">With AI Summaries:</div>
+        <div class="settings-toggle">
+            <label class="toggle-label">
+                Enable YouTube Video Summaries
+                <input type="checkbox" id="enableYoutubeSummary" class="toggle-input">
+                <span class="slider"></span>
+            </label>
+        </div>
         <div class="button-group">
             <button id="exportToObsidian">Export to Obsidian</button>
             <button id="copyToClipboard">Copy to Clipboard</button>

@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "spareMyMac",
     "version": "1.0",
-    "description": "Save URLs from unopened tabs to Obsidian notes",
+    "description": "Save URLs from unopened tabs to Obsidian notes with AI summaries, including YouTube video transcripts",
     "permissions": [
         "tabs",
         "storage",
@@ -11,7 +11,8 @@
         "scripting"
     ],
     "host_permissions": [
-        "<all_urls>"
+        "<all_urls>",
+        "https://*.youtube.com/*"
     ],
     "action": {
         "default_popup": "popup.html"

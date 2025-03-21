@@ -1,7 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { extractVideoId, fetchTranscript } from './youtubeTranscript.js';
 
 // Initialize the Gemini API client
 let geminiClient = null;
+let enableYoutubeSummary = false;
 
 // Function to initialize Gemini API with your API key
 async function initGemini(apiKey) {
@@ -17,9 +19,48 @@ async function initGemini(apiKey) {
     }
 }
 
-// Function to generate summary using Gemini
-async function generateSummary(content) {
-    console.log('Generating summary for content length:', content?.length);
+// Function to set YouTube summary toggle
+function setYoutubeSummaryEnabled(enabled) {
+    enableYoutubeSummary = enabled;
+}
+
+// Function to check if URL is from YouTube
+function isYouTubeUrl(url) {
+    return url.includes('youtube.com/watch') || url.includes('youtu.be/');
+}
+
+// Separate function for YouTube summary generation
+async function generateYouTubeSummary(url) {
+    if (!geminiClient) {
+        throw new Error('Gemini API not initialized. Please check your API key.');
+    }
+
+    try {
+        console.log('Processing YouTube video:', url);
+        const videoId = extractVideoId(url);
+        if (!videoId) {
+            throw new Error('Invalid YouTube URL');
+        }
+
+        const transcript = await fetchTranscript(videoId);
+        if (!transcript) {
+            throw new Error('No transcript available');
+        }
+
+        console.log('Successfully fetched YouTube transcript, generating summary...');
+        const prompt = `Please provide a comprehensive summary of this YouTube video based on its transcript. Include the main topics discussed and key points *Transcript*:\n\n${transcript}`;
+        const result = await geminiClient.generateContent(prompt);
+        const response = await result.response;
+        console.log(response.text());
+        return `[YouTube Video Summary] ${response.text().trim()}`;
+    } catch (error) {
+        console.error('Error processing YouTube video:', error);
+        return null;
+    }
+}
+
+// Clean up generateSummary to handle only non-YouTube content
+async function generateSummary(content, url = '') {
     if (!geminiClient) {
         throw new Error('Gemini API not initialized. Please check your API key.');
     }
@@ -30,8 +71,8 @@ async function generateSummary(content) {
 
     // If we couldn't extract content, generate a summary based on the URL
     if (content.startsWith('Unable to') && content.includes('URL:')) {
-        const url = content.split('URL:')[1].trim();
-        const prompt = `Please provide a brief, informative summary (2-3 sentences) of what this website is likely about, based only on its URL: ${url}. 
+        const urlToSummarize = url || content.split('URL:')[1].trim();
+        const prompt = `Please provide a brief, informative summary (2-3 sentences) of what this website is likely about, based only on its URL: ${urlToSummarize}. 
         Note that I couldn't access the actual content. Focus on what you know about this domain and what the URL path suggests.`;
         
         try {
@@ -42,13 +83,13 @@ async function generateSummary(content) {
             return `[Auto-generated based on URL only] ${summary.trim()}`;
         } catch (error) {
             console.error('Error generating URL summary:', error);
-            return `Unable to summarize. This appears to be a ${getUrlType(url)} website.`;
+            return `Unable to summarize. This appears to be a website.`;
         }
     }
 
     try {
         const prompt = `Please provide a brief, informative summary (2-3 sentences) of the following content:\n\n${content}`;
-        console.log('Sending request to Gemini API...');
+        console.log('Sending request to Gemini API for generic summary...');
         const result = await geminiClient.generateContent(prompt);
         const response = await result.response;
         const summary = response.text();
@@ -532,4 +573,12 @@ async function extractPageContent(tab) {
     }
 }
 
-export { initGemini, generateSummary, extractPageContent }; 
+// Export all functions
+export { 
+    initGemini, 
+    generateSummary, 
+    generateYouTubeSummary, 
+    extractPageContent, 
+    setYoutubeSummaryEnabled, 
+    isYouTubeUrl 
+}; 
