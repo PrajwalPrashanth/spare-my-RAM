@@ -12,6 +12,91 @@ A Chrome extension that helps you save memory on your Mac by collecting URLs fro
 - Copy links without summaries to clipboard
 - Download links without summaries as a markdown file
 
+```mermaid
+graph TB
+    subgraph "Chrome Extension"
+        P["Popup Interface<br/>(popup.html/popup.js)"]
+        CS["Content Script<br/>(contentScript.js)"]
+        YT["YouTube Transcript<br/>(youtubeTranscript.js)"]
+        G["Gemini Integration<br/>(gemini.js)"]
+    end
+
+    subgraph "External Services"
+        GEM["Google Gemini API"]
+        YTA["YouTube API"]
+        OBS["Obsidian"]
+    end
+
+    subgraph "Storage"
+        CS["Chrome Storage"]
+        FS["File System"]
+    end
+
+    subgraph "User Interface Components"
+        UI1["Settings Panel"]
+        UI2["Export Controls"]
+        UI3["Status Display"]
+    end
+
+    P -->|"Initializes"| G
+    P -->|"Manages Settings"| CS
+    P -->|"Handles UI Events"| UI1
+    P -->|"Controls"| UI2
+    P -->|"Updates"| UI3
+
+    CS -->|"Extracts Content"| P
+    YT -->|"Fetches Transcripts"| YTA
+    G -->|"Generates Summaries"| GEM
+
+    P -->|"Exports Notes"| OBS
+    P -->|"Downloads"| FS
+
+    UI2 -->|"Triggers Export"| P
+    UI1 -->|"Updates"| CS
+
+    classDef default fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef external fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef storage fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef ui fill:#ffb,stroke:#333,stroke-width:2px;
+
+    class GEM,YTA,OBS external;
+    class CS,FS storage;
+    class UI1,UI2,UI3 ui;
+```
+
+This diagram shows the main components and their interactions in your Chrome extension. Here's a breakdown of the key components:
+Popup Interface (popup.html/popup.js)
+Main entry point of the extension
+Handles user interactions
+Manages tab processing and exports
+Coordinates between different components
+Content Script (contentScript.js)
+Extracts content from web pages
+Runs in the context of web pages
+YouTube Transcript (youtubeTranscript.js)
+Handles YouTube video transcript extraction
+Uses YouTube Transcript API
+Gemini Integration (gemini.js)
+Integrates with Google's Gemini AI
+Generates summaries of content
+External Services
+Google Gemini API for AI summaries
+YouTube API for transcripts
+Obsidian for note storage
+Storage
+Chrome Storage for extension settings
+File System for downloads
+User Interface Components
+Settings Panel for configuration
+Export Controls for different export options
+Status Display for user feedback
+The extension primarily works by:
+Collecting tabs from the current window
+Processing each tab (either regular content or YouTube transcripts)
+Generating summaries using Gemini AI
+Exporting the results to either Obsidian, clipboard, or downloads
+The system is modular and well-organized, with clear separation of concerns between different components. The popup.js acts as the main controller, orchestrating the interactions between different modules and handling user interface events.
+
 ![](image.png)
 
 ## Installation
@@ -63,11 +148,13 @@ A Chrome extension that helps you save memory on your Mac by collecting URLs fro
 3. Choose one of the following options:
 
    **With AI Summaries:**
+
    - "Export to Obsidian" - Exports links and summaries to Obsidian
    - "Copy to Clipboard" - Copies links and summaries as markdown
    - "Download as Markdown" - Downloads the list as a markdown file
 
    **Links Only (No Summaries):**
+
    - "Export Links to Obsidian" - Exports only links to Obsidian (faster)
    - "Copy Links to Clipboard" - Copies only links as markdown
    - "Download Links" - Downloads only links as a markdown file
@@ -85,6 +172,7 @@ The extension will append the links to your existing note using the Advanced URI
 ## Development
 
 To build the extension in watch mode during development:
+
 ```
 npm run watch
 ```
@@ -111,6 +199,7 @@ When you use the extension to process tabs, it follows these steps:
 1. **Tab Collection**: The extension queries Chrome for all tabs in the current window using `chrome.tabs.query()`.
 
 2. **Content Extraction**: For each tab, the extension:
+
    - Injects a content script into the tab using Chrome's messaging system
    - The content script analyzes the DOM to find the main content
    - It removes non-content elements like navigation, ads, and footers
@@ -193,4 +282,4 @@ This architecture makes the extension both powerful and flexible, allowing it to
 
 ## License
 
-MIT 
+MIT
