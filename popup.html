@@ -52,7 +52,7 @@
         }
 
         #status {
-            margin-top: 10px;
+            margin-top: -8px;
             padding: 8px;
             border-radius: 4px;
             background-color: #f5f5f5;
@@ -130,12 +130,72 @@
             transform: translateX(14px);
             /* Move the slider to the right */
         }
+
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 5px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            resize: vertical;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+        }
+
+        .setting-tip {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .analysis-result {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .primary-button {
+            background-color: #ea4335;
+        }
+
+        .primary-button:hover {
+            background-color: #d62516;
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
         <h2>spareMyMac</h2>
+
+        <div id="status"></div>
+
+        <!-- New YouTube Single Video Research section - only shown for YouTube tabs -->
+        <div id="ytResearchSection" style="display: none;">
+            <div class="section-title">YouTube Video Research</div>
+            <div class="setting-item">
+                <label for="ytResearchPrompt">Custom Research Prompt:</label>
+                <textarea id="ytResearchPrompt" rows="6" placeholder="Enter custom prompt for detailed YouTube video analysis"></textarea>
+                <div class="setting-tip">Customize how this specific YouTube video is analyzed. Use {transcript} where the video transcript should go.</div>
+            </div>
+            <div class="button-group">
+                <button id="analyzeAndExportYT" class="primary-button">Analyze & Export to Obsidian</button>
+                <button id="copyTranscript" class="primary-button">Copy Transcript to Clipboard</button>
+            </div>
+            <div id="ytAnalysisResult" class="analysis-result" style="display: none;"></div>
+        </div>
 
         <div class="section-title">With AI Summaries:</div>
         <div class="settings-toggle">
@@ -163,9 +223,7 @@
                 Extract YouTube Watch Later
             </button>
         </div>
-
-        <div id="status"></div>
-
+        
         <div class="settings">
             <h3>Settings</h3>
             <label for="geminiApiKey">Gemini API Key:</label>

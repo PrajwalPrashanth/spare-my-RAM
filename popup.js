@@ -13,6 +13,34 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Add status message for debugging
   showStatus("Loading extension...", "blue");
 
+  // Check if current tab is a YouTube video
+  chrome.tabs.query(
+    { active: true, currentWindow: true },
+    async function (tabs) {
+      const currentTab = tabs[0];
+      const isYouTubeVideo = isYouTubeUrl(currentTab?.url);
+
+      // Show/hide the YouTube Research section based on if it's a YouTube video
+      document.getElementById("ytResearchSection").style.display =
+        isYouTubeVideo ? "block" : "none";
+
+      // Set default research prompt if current tab is a YouTube video
+      if (isYouTubeVideo) {
+        const defaultResearchPrompt =
+          "Please provide a detailed analysis of this YouTube video based on its transcript. Include:\n" +
+          "1. Main topics and key points\n" +
+          "2. Important facts and data mentioned\n" +
+          "3. Notable quotes or statements\n" +
+          "4. Any methodologies or techniques discussed\n" +
+          "5. A critical analysis of the content\n\n" +
+          "{transcript}";
+
+        document.getElementById("ytResearchPrompt").value =
+          defaultResearchPrompt;
+      }
+    }
+  );
+
   // Load saved settings
   chrome.storage.sync.get(
     ["obsidianVault", "obsidianNote", "geminiApiKey", "enableYoutubeSummary"],
@@ -83,6 +111,16 @@ document.addEventListener("DOMContentLoaded", async function () {
   document
     .getElementById("downloadLinks")
     .addEventListener("click", downloadLinks);
+
+  // Button event listeners for YouTube research
+  document
+    .getElementById("analyzeAndExportYT")
+    .addEventListener("click", analyzeAndExportYT);
+
+  // Add transcript copy button listener
+  document
+    .getElementById("copyTranscript")
+    .addEventListener("click", copyYouTubeTranscript);
 
   // Add auto-scroll button listener
   document
@@ -497,4 +535,117 @@ function showStatus(message, color = "#4caf50") {
   const statusElement = document.getElementById("status");
   statusElement.textContent = message;
   statusElement.style.color = color;
+}
+
+// Function to analyze and export YouTube analysis
+async function analyzeAndExportYT() {
+  try {
+    showStatus("Analyzing YouTube video...", "blue");
+
+    // Get the current tab
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+
+    if (!isYouTubeUrl(tab.url)) {
+      showStatus("Not a YouTube video", "red");
+      return;
+    }
+
+    // Get custom prompt
+    const customPrompt = document.getElementById("ytResearchPrompt").value;
+
+    // Generate the YouTube analysis
+    const analysis = await generateYouTubeSummary(tab.url, customPrompt);
+
+    if (!analysis) {
+      showStatus(
+        "Failed to analyze video. Transcript may be unavailable.",
+        "red"
+      );
+      return;
+    }
+
+    // Display the analysis
+    const resultElement = document.getElementById("ytAnalysisResult");
+    resultElement.textContent = analysis;
+    resultElement.style.display = "block";
+
+    // Format the content for Obsidian with markdown
+    const now = new Date();
+    const dateStr = now.toLocaleDateString();
+    const timeStr = now.toLocaleTimeString();
+
+    let markdown = `# YouTube Research: ${tab.title}\n\n`;
+    markdown += `*Analyzed on ${dateStr} at ${timeStr}*\n\n`;
+    markdown += `URL: ${tab.url}\n\n`;
+    markdown += `## Analysis\n\n${analysis}\n\n`;
+
+    // Export the analysis to Obsidian
+    await exportContentToObsidian(
+      markdown,
+      "Video analyzed and exported to Obsidian"
+    );
+
+    showStatus("Analysis complete and exported to Obsidian", "green");
+  } catch (error) {
+    console.error("Error analyzing and exporting YouTube video:", error);
+    showStatus(`Analysis failed: ${error.message}`, "red");
+  }
+}
+
+// Function to copy YouTube transcript to clipboard
+async function copyYouTubeTranscript() {
+  try {
+    showStatus("Fetching transcript...", "blue");
+
+    // Get current tab
+    const tabs = await new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, resolve);
+    });
+
+    if (!tabs || tabs.length === 0) {
+      showStatus("No active tab found", "red");
+      return;
+    }
+
+    const currentTab = tabs[0];
+
+    // Check if it's a YouTube video
+    if (!isYouTubeUrl(currentTab.url)) {
+      showStatus("Not a YouTube video", "red");
+      return;
+    }
+
+    // Import necessary functions
+    const { extractVideoId, fetchTranscript } = await import(
+      "./youtubeTranscript.js"
+    );
+
+    // Get video ID
+    const videoId = extractVideoId(currentTab.url);
+    if (!videoId) {
+      showStatus("Invalid YouTube URL", "red");
+      return;
+    }
+
+    // Fetch transcript
+    const transcript = await fetchTranscript(videoId);
+    if (!transcript) {
+      showStatus("No transcript available", "red");
+      return;
+    }
+
+    // Format the transcript with video title and URL
+    const formattedTranscript = `# ${currentTab.title}\n${currentTab.url}\n\n## Transcript:\n\n${transcript}`;
+
+    // Copy to clipboard
+    await copyTextToClipboard(formattedTranscript);
+
+    showStatus("Transcript copied to clipboard!", "#4caf50");
+  } catch (error) {
+    console.error("Error copying YouTube transcript:", error);
+    showStatus(`Error: ${error.message}`, "red");
+  }
 }
