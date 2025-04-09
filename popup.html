@@ -225,15 +225,27 @@
         </div>
         
         <div class="settings">
-            <h3>Settings</h3>
-            <label for="geminiApiKey">Gemini API Key:</label>
-            <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key">
-
-            <label for="obsidianVault">Obsidian Vault Name:</label>
-            <input type="text" id="obsidianVault" placeholder="Enter your vault name">
-
-            <label for="obsidianNote">Note Name:</label>
-            <input type="text" id="obsidianNote" placeholder="Enter note name">
+            <div class="section-title">Settings</div>
+            <div class="setting-item">
+                <label for="geminiApiKey">Gemini API Key:</label>
+                <input type="password" id="geminiApiKey" />
+                <div class="setting-tip">Enter your Gemini API key from Google AI Studio</div>
+            </div>
+            <div class="setting-item">
+                <label for="obsidianVault">Obsidian Vault Name:</label>
+                <input type="text" id="obsidianVault" />
+                <div class="setting-tip">Enter your Obsidian vault name (case-sensitive)</div>
+            </div>
+            <div class="setting-item">
+                <label for="obsidianNote">Default Note Name:</label>
+                <input type="text" id="obsidianNote" />
+                <div class="setting-tip">Enter the note name where content will be appended (will be created if it doesn't exist)</div>
+            </div>
+            <div class="setting-item">
+                <label for="defaultYTPrompt">Default YouTube Research Prompt:</label>
+                <textarea id="defaultYTPrompt" rows="8" placeholder="Enter your default prompt for YouTube video analysis. Use {transcript} where the video transcript should go."></textarea>
+                <div class="setting-tip">This will be used as the default prompt for YouTube research. You can still modify it per video.</div>
+            </div>
         </div>
     </div>
     <script type="module" src="dist/bundle.js"></script>

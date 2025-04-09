@@ -26,24 +26,33 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       // Set default research prompt if current tab is a YouTube video
       if (isYouTubeVideo) {
-        const defaultResearchPrompt =
-          "Please provide a detailed analysis of this YouTube video based on its transcript. Include:\n" +
-          "1. Main topics and key points\n" +
-          "2. Important facts and data mentioned\n" +
-          "3. Notable quotes or statements\n" +
-          "4. Any methodologies or techniques discussed\n" +
-          "5. A critical analysis of the content\n\n" +
-          "{transcript}";
+        // Get the saved default prompt
+        chrome.storage.sync.get(["defaultYTPrompt"], function (items) {
+          const defaultPrompt =
+            items.defaultYTPrompt ||
+            "Please provide a detailed analysis of this YouTube video based on its transcript. Include:\n" +
+              "1. Main topics and key points\n" +
+              "2. Important facts and data mentioned\n" +
+              "3. Notable quotes or statements\n" +
+              "4. Any methodologies or techniques discussed\n" +
+              "5. A critical analysis of the content\n\n" +
+              "{transcript}";
 
-        document.getElementById("ytResearchPrompt").value =
-          defaultResearchPrompt;
+          document.getElementById("ytResearchPrompt").value = defaultPrompt;
+        });
       }
     }
   );
 
   // Load saved settings
   chrome.storage.sync.get(
-    ["obsidianVault", "obsidianNote", "geminiApiKey", "enableYoutubeSummary"],
+    [
+      "obsidianVault",
+      "obsidianNote",
+      "geminiApiKey",
+      "enableYoutubeSummary",
+      "defaultYTPrompt",
+    ],
     async function (items) {
       console.log("Settings loaded:", Object.keys(items));
 
@@ -68,6 +77,29 @@ document.addEventListener("DOMContentLoaded", async function () {
         showStatus("Please enter your Gemini API key", "blue");
       }
 
+      // Set default YouTube prompt if available
+      const defaultYTPrompt =
+        items.defaultYTPrompt ||
+        "Please provide a detailed analysis of this YouTube video based on its transcript. Include:\n" +
+          "1. Main topics and key points\n" +
+          "2. Important facts and data mentioned\n" +
+          "3. Notable quotes or statements\n" +
+          "4. Any methodologies or techniques discussed\n" +
+          "5. A critical analysis of the content\n\n" +
+          "{transcript}";
+
+      document.getElementById("defaultYTPrompt").value = defaultYTPrompt;
+
+      // Save this as the previous default prompt for comparison
+      chrome.storage.sync.set({ previousDefaultPrompt: defaultYTPrompt });
+
+      // Add input event listener for real-time syncing of default prompt changes
+      document
+        .getElementById("defaultYTPrompt")
+        .addEventListener("input", function (e) {
+          syncResearchPrompt(e.target.value);
+        });
+
       // Set YouTube summary toggle state
       const enableYoutubeSummary = items.enableYoutubeSummary || false;
       document.getElementById("enableYoutubeSummary").checked =
@@ -88,6 +120,9 @@ document.addEventListener("DOMContentLoaded", async function () {
     .addEventListener("change", saveSettings);
   document
     .getElementById("enableYoutubeSummary")
+    .addEventListener("change", saveSettings);
+  document
+    .getElementById("defaultYTPrompt")
     .addEventListener("change", saveSettings);
 
   // Button event listeners for summarized content
@@ -128,6 +163,26 @@ document.addEventListener("DOMContentLoaded", async function () {
     .addEventListener("click", startAutoScroll);
 });
 
+// Function to sync research prompt with default prompt
+function syncResearchPrompt(defaultPrompt) {
+  const researchPrompt = document.getElementById("ytResearchPrompt");
+  const currentResearchPrompt = researchPrompt.value;
+
+  // Get the previously saved default prompt
+  chrome.storage.sync.get(["previousDefaultPrompt"], function (items) {
+    const previousDefault = items.previousDefaultPrompt;
+
+    // Only update if the research prompt matches the previous default
+    // This ensures we don't override user's custom modifications
+    if (!previousDefault || currentResearchPrompt === previousDefault) {
+      researchPrompt.value = defaultPrompt;
+    }
+
+    // Save the new default prompt as previous for future comparison
+    chrome.storage.sync.set({ previousDefaultPrompt: defaultPrompt });
+  });
+}
+
 // Save settings to Chrome storage
 async function saveSettings() {
   const obsidianVault = document.getElementById("obsidianVault").value;
@@ -136,6 +191,7 @@ async function saveSettings() {
   const enableYoutubeSummary = document.getElementById(
     "enableYoutubeSummary"
   ).checked;
+  const defaultYTPrompt = document.getElementById("defaultYTPrompt").value;
 
   showStatus("Saving settings...", "blue");
 
@@ -149,12 +205,16 @@ async function saveSettings() {
 
   setYoutubeSummaryEnabled(enableYoutubeSummary);
 
+  // Sync the research prompt with the new default
+  syncResearchPrompt(defaultYTPrompt);
+
   chrome.storage.sync.set(
     {
       obsidianVault: obsidianVault,
       obsidianNote: obsidianNote,
       geminiApiKey: geminiApiKey,
       enableYoutubeSummary: enableYoutubeSummary,
+      defaultYTPrompt: defaultYTPrompt,
     },
     function () {
       showStatus("Settings saved");
