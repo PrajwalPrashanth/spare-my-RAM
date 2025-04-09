@@ -173,6 +173,21 @@
         .primary-button:hover {
             background-color: #d62516;
         }
+
+        .prompt-select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        .prompt-select:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
     </style>
 </head>
 
@@ -186,9 +201,15 @@
         <div id="ytResearchSection" style="display: none;">
             <div class="section-title">YouTube Video Research</div>
             <div class="setting-item">
+                <button id="selectPromptsFolder" class="secondary-button" style="margin-bottom: 10px;">Select Prompts Folder</button>
+                <label for="obsidianPromptSelect">Prompt Template:</label>
+                <select id="obsidianPromptSelect" class="prompt-select">
+                    <option value="">-- Select a prompt template --</option>
+                </select>
+                <div class="setting-tip">Choose a prompt template from your Obsidian /prompts folder</div>
                 <label for="ytResearchPrompt">Custom Research Prompt:</label>
-                <textarea id="ytResearchPrompt" rows="6" placeholder="Enter custom prompt for detailed YouTube video analysis"></textarea>
-                <div class="setting-tip">Customize how this specific YouTube video is analyzed. Use {transcript} where the video transcript should go.</div>
+                <textarea id="ytResearchPrompt" rows="6" placeholder="Enter custom prompt for detailed YouTube video analysis. You can paste content from your Obsidian prompts here."></textarea>
+                <div class="setting-tip">Use {transcript} where you want the video transcript to be inserted in your prompt.</div>
             </div>
             <div class="button-group">
                 <button id="analyzeAndExportYT" class="primary-button">Analyze & Export to Obsidian</button>

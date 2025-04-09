@@ -7,11 +7,18 @@ import {
   isYouTubeUrl,
 } from "./gemini.js";
 
+let promptsFolderHandle = null;
+
 document.addEventListener("DOMContentLoaded", async function () {
   console.log("Popup loaded");
 
   // Add status message for debugging
   showStatus("Loading extension...", "blue");
+
+  // Add event listener for the select prompts folder button
+  document
+    .getElementById("selectPromptsFolder")
+    .addEventListener("click", requestFolderAccess);
 
   // Check if current tab is a YouTube video
   chrome.tabs.query(
@@ -49,6 +56,8 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       if (items.obsidianVault) {
         document.getElementById("obsidianVault").value = items.obsidianVault;
+        // Load prompts when vault is loaded
+        loadObsidianPrompts();
       }
       if (items.obsidianNote) {
         document.getElementById("obsidianNote").value = items.obsidianNote;
@@ -126,6 +135,11 @@ document.addEventListener("DOMContentLoaded", async function () {
   document
     .getElementById("autoScroll")
     .addEventListener("click", startAutoScroll);
+
+  // Add event listener for prompt selection
+  document
+    .getElementById("obsidianPromptSelect")
+    .addEventListener("change", handlePromptSelection);
 });
 
 // Save settings to Chrome storage
@@ -647,5 +661,207 @@ async function copyYouTubeTranscript() {
   } catch (error) {
     console.error("Error copying YouTube transcript:", error);
     showStatus(`Error: ${error.message}`, "red");
+  }
+}
+
+// Function to request folder access
+async function requestFolderAccess() {
+  try {
+    // Check if File System Access API is supported
+    if (window.showDirectoryPicker) {
+      // Modern approach using File System Access API
+      promptsFolderHandle = await window.showDirectoryPicker({
+        mode: "read",
+        startIn: "documents",
+      });
+
+      // Store the folder name for future reference
+      chrome.storage.local.set({
+        promptsFolderName: promptsFolderHandle.name,
+      });
+
+      // Load prompts immediately after selecting the folder
+      await loadObsidianPrompts();
+      return promptsFolderHandle;
+    } else {
+      // Fallback approach using traditional file input
+      const input = document.createElement("input");
+      input.type = "file";
+      input.multiple = true;
+      input.webkitdirectory = true;
+      input.directory = true;
+
+      // Return a promise that resolves when the file is selected
+      return new Promise((resolve) => {
+        input.onchange = async (e) => {
+          const files = Array.from(e.target.files).filter((file) =>
+            file.name.endsWith(".md")
+          );
+          promptsFolderHandle = {
+            name:
+              files[0]?.webkitRelativePath.split("/")[0] || "Selected Folder",
+            files: files,
+            // Implement a custom getFileHandle method for compatibility
+            getFileHandle: async (fileName) => {
+              const file = files.find((f) => f.name === fileName);
+              if (!file) throw new Error("File not found");
+              return {
+                getFile: async () => file,
+              };
+            },
+            // Implement a custom values method for compatibility
+            values: async function* () {
+              for (const file of files) {
+                yield {
+                  kind: "file",
+                  name: file.name,
+                  handle: file,
+                };
+              }
+            },
+          };
+
+          // Store the folder name for future reference
+          chrome.storage.local.set({
+            promptsFolderName: promptsFolderHandle.name,
+          });
+
+          // Load prompts immediately after selecting the folder
+          await loadObsidianPrompts();
+          resolve(promptsFolderHandle);
+        };
+
+        // Trigger the file input click
+        input.click();
+      });
+    }
+  } catch (error) {
+    console.error("Error accessing folder:", error);
+    showStatus("Failed to access prompts folder", "red");
+    return null;
+  }
+}
+
+// Function to refresh prompts
+async function refreshPrompts() {
+  // Clear the existing folder handle to force re-selection
+  promptsFolderHandle = null;
+  await requestFolderAccess();
+}
+
+// Function to load prompts from the selected folder
+async function loadObsidianPrompts() {
+  try {
+    if (!promptsFolderHandle) {
+      showStatus("Please select a prompts folder first", "blue");
+      return;
+    }
+
+    // Get all files in the folder
+    const files = [];
+    if (promptsFolderHandle.values) {
+      // Modern API approach
+      try {
+        for await (const entry of promptsFolderHandle.values()) {
+          if (entry.kind === "file" && entry.name.endsWith(".md")) {
+            files.push({
+              name: entry.name,
+              handle: entry,
+            });
+          }
+        }
+      } catch (error) {
+        // If we get an error reading the directory, try refreshing the handle
+        console.error("Error reading directory, attempting refresh:", error);
+        await refreshPrompts();
+        return;
+      }
+    } else if (promptsFolderHandle.files) {
+      // Fallback approach
+      files.push(
+        ...promptsFolderHandle.files.map((file) => ({
+          name: file.name,
+          handle: file,
+        }))
+      );
+    }
+
+    // Update the dropdown
+    const select = document.getElementById("obsidianPromptSelect");
+
+    // Clear existing options except the first one
+    while (select.options.length > 1) {
+      select.remove(1);
+    }
+
+    // Add new options
+    for (const file of files) {
+      const option = document.createElement("option");
+      option.value = file.name;
+      option.textContent = file.name.replace(".md", "");
+      select.appendChild(option);
+    }
+
+    // Add/Update the refresh button
+    let refreshButton = document.getElementById("refreshPrompts");
+    if (!refreshButton) {
+      refreshButton = document.createElement("button");
+      refreshButton.id = "refreshPrompts";
+      refreshButton.textContent = "Refresh Prompts";
+      refreshButton.className = "secondary-button";
+      refreshButton.style.marginBottom = "10px";
+      refreshButton.onclick = refreshPrompts; // Use the new refresh function
+
+      // Insert the refresh button after the select prompts folder button
+      const selectButton = document.getElementById("selectPromptsFolder");
+      selectButton.parentNode.insertBefore(
+        refreshButton,
+        selectButton.nextSibling
+      );
+    }
+
+    showStatus("Prompts loaded successfully", "green");
+  } catch (error) {
+    console.error("Error loading prompts:", error);
+    showStatus("Failed to load prompts", "red");
+  }
+}
+
+// Function to handle prompt selection
+async function handlePromptSelection(event) {
+  const selectedFile = event.target.value;
+  if (!selectedFile || !promptsFolderHandle) return;
+
+  try {
+    let fileContent;
+    if (promptsFolderHandle.getFileHandle) {
+      // Modern API approach
+      try {
+        const fileHandle = await promptsFolderHandle.getFileHandle(
+          selectedFile
+        );
+        const file = await fileHandle.getFile();
+        fileContent = await file.text();
+      } catch (error) {
+        // If we get an error reading the file, try refreshing the handle
+        console.error("Error reading file, attempting refresh:", error);
+        await refreshPrompts();
+        return;
+      }
+    } else {
+      // Fallback approach
+      const file = promptsFolderHandle.files.find(
+        (f) => f.name === selectedFile
+      );
+      if (!file) throw new Error("File not found");
+      fileContent = await file.text();
+    }
+
+    // Update the textarea
+    document.getElementById("ytResearchPrompt").value = fileContent;
+    showStatus("Prompt loaded successfully", "green");
+  } catch (error) {
+    console.error("Error reading prompt file:", error);
+    showStatus("Failed to read prompt file", "red");
   }
 }

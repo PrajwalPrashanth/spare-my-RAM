@@ -4,10 +4,12 @@
     "version": "1.3",
     "description": "Save URLs from unopened tabs to Obsidian notes with AI summaries, including YouTube video transcripts",
     "permissions": [
-        "tabs",
         "storage",
+        "activeTab",
         "scripting",
-        "activeTab"
+        "tabs",
+        "clipboardWrite",
+        "fileSystem"
     ],
     "host_permissions": [
         "<all_urls>"
